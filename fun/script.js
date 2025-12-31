@@ -1,32 +1,56 @@
-import { WORD_LIST, VALID_WORDS } from './words.js';
+import { DICTIONARY } from './words.js';
 
-let targetWordObj = {};
+let targetWord = "";
 let currentGuess = "";
 let guesses = [];
 let timerInterval;
 let seconds = 0;
 const MAX_GUESSES = 6;
 
+/**
+ * Hashing: Two-way mapping
+ * Word -> Index -> Base36 ID
+ * ID -> Base36 Index -> Word
+ */
+const encodeId = (index) => index.toString(36).toUpperCase();
+const decodeId = (id) => parseInt(id, 36);
+
 function initGame() {
-    // 3. Selection via Hash/Anchor
-    const hash = window.location.hash.replace('#', '');
-    const foundWord = WORD_LIST.find(w => w.id === hash);
-    
-    if (foundWord) {
-        targetWordObj = foundWord;
+    const hash = window.location.hash.replace('#', '').toUpperCase();
+    let wordIndex;
+
+    // 3. Hash/URL Logic
+    if (hash) {
+        wordIndex = decodeId(hash);
+        // Validate if decoded index exists in dictionary
+        if (DICTIONARY[wordIndex]) {
+            targetWord = DICTIONARY[wordIndex].toUpperCase();
+        } else {
+            // Fallback if ID is invalid
+            selectRandomWord();
+        }
     } else {
-        targetWordObj = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
-        window.location.hash = targetWordObj.id;
+        selectRandomWord();
     }
 
-    // Reset State
+    resetState();
+}
+
+function selectRandomWord() {
+    const randomIndex = Math.floor(Math.random() * DICTIONARY.length);
+    targetWord = DICTIONARY[randomIndex].toUpperCase();
+    // Update URL without reloading
+    window.location.hash = encodeId(randomIndex);
+}
+
+function resetState() {
     currentGuess = "";
     guesses = [];
     seconds = 0;
     clearInterval(timerInterval);
     startTimer();
     
-    document.getElementById("word-id-display").innerText = `ID: #${targetWordObj.id}`;
+    document.getElementById("word-id-display").innerText = `ID: #${window.location.hash.replace('#', '')}`;
     document.getElementById("board").innerHTML = "";
     createBoard();
     createKeyboard();
@@ -47,21 +71,21 @@ function submitGuess() {
     
     if (guessUpper.length !== 5) return;
 
-    // 4. Invalid Word Check
-    if (!VALID_WORDS.includes(guessUpper) && !WORD_LIST.some(w => w.word === guessUpper)) {
+    // 4. Validation (Combined List)
+    if (!DICTIONARY.includes(guessUpper)) {
         alert("Not in word list!");
         return;
     }
 
     const rowIdx = guesses.length;
-    const targetArr = targetWordObj.word.split("");
+    const targetArr = targetWord.split("");
     const guessArr = guessUpper.split("");
     const rowTiles = document.querySelectorAll(`#board .row`)[rowIdx].children;
 
     let tempTarget = [...targetArr];
     let results = Array(5).fill("absent");
 
-    // Pass 1: Green
+    // Pass 1: Green (Correct Position)
     guessArr.forEach((letter, i) => {
         if (letter === tempTarget[i]) {
             results[i] = "correct";
@@ -69,7 +93,7 @@ function submitGuess() {
         }
     });
 
-    // Pass 2: Yellow
+    // Pass 2: Yellow (Wrong Position)
     guessArr.forEach((letter, i) => {
         if (results[i] !== "correct" && tempTarget.includes(letter)) {
             results[i] = "present";
@@ -77,6 +101,7 @@ function submitGuess() {
         }
     });
 
+    // Update UI
     results.forEach((status, i) => {
         rowTiles[i].classList.add(status);
         updateKeyboardUI(guessArr[i], status);
@@ -84,18 +109,18 @@ function submitGuess() {
 
     guesses.push(currentGuess);
     
-    if (guessUpper === targetWordObj.word) {
+    if (guessUpper === targetWord) {
         clearInterval(timerInterval);
-        showModal("Winner!", `ID #${targetWordObj.id} solved in ${document.getElementById("timer").innerText}`);
+        showModal("Winner!", `Word found in ${document.getElementById("timer").innerText}`);
     } else if (guesses.length === MAX_GUESSES) {
         clearInterval(timerInterval);
-        showModal("Game Over", `The word was ${targetWordObj.word}.`);
+        showModal("Game Over", `The word was ${targetWord}.`);
     }
 
     currentGuess = "";
 }
 
-// 1. Fixed Keyboard Layout
+// Keyboard and Input logic
 function createKeyboard() {
     const layout = [
         "QWERTYUIOP".split(""),
@@ -118,16 +143,17 @@ function createKeyboard() {
 }
 
 function handleInput(key) {
-    if (key === "ENTER" || key === "Enter") submitGuess();
-    else if (key === "DEL" || key === "Backspace") backspace();
-    else if (/^[a-zA-Z]$/.test(key)) addLetter(key);
+    const keyUpper = key.toUpperCase();
+    if (keyUpper === "ENTER") submitGuess();
+    else if (keyUpper === "DEL" || keyUpper === "BACKSPACE") backspace();
+    else if (/^[A-Z]$/.test(keyUpper)) addLetter(keyUpper);
 }
 
 window.addEventListener("keydown", (e) => handleInput(e.key));
 
 function addLetter(letter) {
     if (currentGuess.length < 5 && guesses.length < MAX_GUESSES) {
-        currentGuess += letter.toUpperCase();
+        currentGuess += letter;
         updateRowUI();
     }
 }
@@ -160,19 +186,30 @@ function updateKeyboardUI(letter, status) {
     });
 }
 
+function createBoard() {
+    const board = document.getElementById("board");
+    for (let i = 0; i < MAX_GUESSES; i++) {
+        const row = document.createElement("div");
+        row.className = "row";
+        for (let j = 0; j < 5; j++) {
+            const tile = document.createElement("div");
+            tile.className = "tile";
+            row.appendChild(tile);
+        }
+        board.appendChild(row);
+    }
+}
+
 function showModal(title, msg) {
     document.getElementById("modal-title").innerText = title;
     document.getElementById("modal-message").innerText = msg;
     document.getElementById("modal").classList.remove("hidden");
 }
 
-document.getElementById("new-game-btn").onclick = () => {
-    window.location.hash = ""; // Clear hash to get a random word
-    initGame();
-};
-document.getElementById("modal-close").onclick = initGame;
+document.getElementById("new-game-btn").onclick = selectRandomWord;
+document.getElementById("modal-close").onclick = selectRandomWord;
 
-// Listen for URL changes (allows users to paste an ID in the URL bar)
+// Sync game if user changes the URL hash manually
 window.onhashchange = initGame;
 
 initGame();
