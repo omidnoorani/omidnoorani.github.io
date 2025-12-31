@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Wordle Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-mode">
+    <div id="game-container">
+        <header>
+            <h1>WORDLE</h1>
+            <div class="controls">
+                <span id="word-id-display">ID: #000</span>
+                <button id="new-game-btn">New Word</button>
+            </div>
+        </header>
+
+        <div id="board"></div>
+
+        <div id="keyboard">
+            <div class="keyboard-row" id="row1"></div>
+            <div class="keyboard-row" id="row2"></div>
+            <div class="keyboard-row" id="row3"></div>
+        </div>
+    </div>
+
+    <div id="modal" class="hidden">
+        <div class="modal-content">
+            <h2 id="modal-title"></h2>
+            <p id="modal-message"></p>
+            <button id="modal-close">Play Again</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
