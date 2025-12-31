@@ -1,22 +1,30 @@
-const WORD_LIST = [
-    { id: "8A21", word: "REACT" },
-    { id: "4B90", word: "PLATE" },
-    { id: "1F34", word: "SOUND" },
-    { id: "9D22", word: "GHOST" },
-    { id: "5E11", word: "LIGHT" },
-    { id: "2C88", word: "BRICK" }
-];
+import { WORD_LIST, VALID_WORDS } from './words.js';
 
 let targetWordObj = {};
 let currentGuess = "";
 let guesses = [];
+let timerInterval;
+let seconds = 0;
 const MAX_GUESSES = 6;
 
-// Initialize Game
 function initGame() {
-    targetWordObj = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+    // 3. Selection via Hash/Anchor
+    const hash = window.location.hash.replace('#', '');
+    const foundWord = WORD_LIST.find(w => w.id === hash);
+    
+    if (foundWord) {
+        targetWordObj = foundWord;
+    } else {
+        targetWordObj = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+        window.location.hash = targetWordObj.id;
+    }
+
+    // Reset State
     currentGuess = "";
     guesses = [];
+    seconds = 0;
+    clearInterval(timerInterval);
+    startTimer();
     
     document.getElementById("word-id-display").innerText = `ID: #${targetWordObj.id}`;
     document.getElementById("board").innerHTML = "";
@@ -25,43 +33,43 @@ function initGame() {
     document.getElementById("modal").classList.add("hidden");
 }
 
-function createBoard() {
-    const board = document.getElementById("board");
-    for (let i = 0; i < MAX_GUESSES; i++) {
-        const row = document.createElement("div");
-        row.className = "row";
-        for (let j = 0; j < 5; j++) {
-            const tile = document.createElement("div");
-            tile.className = "tile";
-            tile.id = `tile-${i}-${j}`;
-            row.appendChild(tile);
-        }
-        board.appendChild(row);
-    }
+function startTimer() {
+    timerInterval = setInterval(() => {
+        seconds++;
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        document.getElementById("timer").innerText = `Time: ${mins}:${secs}`;
+    }, 1000);
 }
 
-// Logic to check guess
 function submitGuess() {
-    if (currentGuess.length !== 5) return;
+    const guessUpper = currentGuess.toUpperCase();
+    
+    if (guessUpper.length !== 5) return;
 
-    // Optional: Dictionary validation check could go here
+    // 4. Invalid Word Check
+    if (!VALID_WORDS.includes(guessUpper) && !WORD_LIST.some(w => w.word === guessUpper)) {
+        alert("Not in word list!");
+        return;
+    }
+
     const rowIdx = guesses.length;
     const targetArr = targetWordObj.word.split("");
-    const guessArr = currentGuess.toUpperCase().split("");
+    const guessArr = guessUpper.split("");
     const rowTiles = document.querySelectorAll(`#board .row`)[rowIdx].children;
 
-    // First pass: Find Green (Correct)
     let tempTarget = [...targetArr];
     let results = Array(5).fill("absent");
 
+    // Pass 1: Green
     guessArr.forEach((letter, i) => {
         if (letter === tempTarget[i]) {
             results[i] = "correct";
-            tempTarget[i] = null; // Mark as used
+            tempTarget[i] = null;
         }
     });
 
-    // Second pass: Find Yellow (Present)
+    // Pass 2: Yellow
     guessArr.forEach((letter, i) => {
         if (results[i] !== "correct" && tempTarget.includes(letter)) {
             results[i] = "present";
@@ -69,7 +77,6 @@ function submitGuess() {
         }
     });
 
-    // Update UI
     results.forEach((status, i) => {
         rowTiles[i].classList.add(status);
         updateKeyboardUI(guessArr[i], status);
@@ -77,21 +84,46 @@ function submitGuess() {
 
     guesses.push(currentGuess);
     
-    if (currentGuess.toUpperCase() === targetWordObj.word) {
-        showModal("Winner!", `You found ${targetWordObj.word} in ${guesses.length} tries.`);
+    if (guessUpper === targetWordObj.word) {
+        clearInterval(timerInterval);
+        showModal("Winner!", `ID #${targetWordObj.id} solved in ${document.getElementById("timer").innerText}`);
     } else if (guesses.length === MAX_GUESSES) {
+        clearInterval(timerInterval);
         showModal("Game Over", `The word was ${targetWordObj.word}.`);
     }
 
     currentGuess = "";
 }
 
-// Handle Inputs
-window.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitGuess();
-    if (e.key === "Backspace") backspace();
-    if (/^[a-zA-Z]$/.test(e.key)) addLetter(e.key);
-});
+// 1. Fixed Keyboard Layout
+function createKeyboard() {
+    const layout = [
+        "QWERTYUIOP".split(""),
+        "ASDFGHJKL".split(""),
+        ["ENTER", ..."ZXCVBNM".split(""), "DEL"]
+    ];
+
+    layout.forEach((row, i) => {
+        const rowEl = document.getElementById(`row${i + 1}`);
+        rowEl.innerHTML = "";
+        row.forEach(key => {
+            const btn = document.createElement("button");
+            btn.className = "key";
+            if (key === "ENTER" || key === "DEL") btn.classList.add("wide");
+            btn.innerText = key;
+            btn.onclick = () => handleInput(key);
+            rowEl.appendChild(btn);
+        });
+    });
+}
+
+function handleInput(key) {
+    if (key === "ENTER" || key === "Enter") submitGuess();
+    else if (key === "DEL" || key === "Backspace") backspace();
+    else if (/^[a-zA-Z]$/.test(key)) addLetter(key);
+}
+
+window.addEventListener("keydown", (e) => handleInput(e.key));
 
 function addLetter(letter) {
     if (currentGuess.length < 5 && guesses.length < MAX_GUESSES) {
@@ -113,34 +145,16 @@ function updateRowUI() {
     }
 }
 
-// Keyboard Generation
-function createKeyboard() {
-    const rows = ["QWERTYUIOP", "ASDFGHJKL", "EnterZXCVBNM⌫"];
-    rows.forEach((rowStr, i) => {
-        const rowEl = document.getElementById(`row${i + 1}`);
-        rowEl.innerHTML = "";
-        rowStr.split("").forEach(char => {
-            const btn = document.createElement("button");
-            btn.className = "key";
-            btn.innerText = char === "⌫" ? "DEL" : char;
-            if (char === "Enter" || char === "⌫") btn.classList.add("wide");
-            
-            btn.onclick = () => {
-                if (char === "Enter") submitGuess();
-                else if (char === "⌫") backspace();
-                else addLetter(char);
-            };
-            rowEl.appendChild(btn);
-        });
-    });
-}
-
 function updateKeyboardUI(letter, status) {
     const keys = document.querySelectorAll(".key");
     keys.forEach(key => {
-        if (key.innerText === letter || (letter === "DEL" && key.innerText === "⌫")) {
-            if (!key.classList.contains("correct")) {
-                key.className = `key ${status}`;
+        if (key.innerText === letter) {
+            if (status === "correct") {
+                key.className = "key correct";
+            } else if (status === "present" && !key.classList.contains("correct")) {
+                key.className = "key present";
+            } else if (status === "absent" && !key.classList.contains("correct") && !key.classList.contains("present")) {
+                key.className = "key absent";
             }
         }
     });
@@ -152,7 +166,13 @@ function showModal(title, msg) {
     document.getElementById("modal").classList.remove("hidden");
 }
 
-document.getElementById("new-game-btn").onclick = initGame;
+document.getElementById("new-game-btn").onclick = () => {
+    window.location.hash = ""; // Clear hash to get a random word
+    initGame();
+};
 document.getElementById("modal-close").onclick = initGame;
+
+// Listen for URL changes (allows users to paste an ID in the URL bar)
+window.onhashchange = initGame;
 
 initGame();

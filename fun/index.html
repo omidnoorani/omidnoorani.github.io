@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Wordle Clone</title>
+    <title>Wordle Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-mode">
     <div id="game-container">
         <header>
             <h1>WORDLE</h1>
-            <div class="controls">
-                <span id="word-id-display">ID: #000</span>
-                <button id="new-game-btn">New Word</button>
+            <div class="stats-bar">
+                <span id="word-id-display">ID: #---</span>
+                <span id="timer">Time: 00:00</span>
             </div>
+            <button id="new-game-btn">New Word</button>
         </header>
 
         <div id="board"></div>
@@ -33,6 +34,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
