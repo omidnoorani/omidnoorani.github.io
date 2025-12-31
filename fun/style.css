@@ -2,6 +2,7 @@
     --bg-color: #121213;
     --text-color: #ffffff;
     --border-color: #3a3a3c;
+    --border-active: #565758;
     --correct: #538d4e;
     --present: #b59f3b;
     --absent: #3a3a3c;
@@ -11,42 +12,49 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Segoe UI', sans-serif;
-    display: flex;
-    justify-content: center;
-    margin: 0;
-    height: 100vh;
-}
-
-#game-container {
-    width: 100%;
-    max-width: 500px;
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
 }
 
+/* Header & Controls */
 header {
-    border-bottom: 1px solid var(--border-color);
-    width: 100%;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 5px 20px;
+    width: 100%;
+    max-width: 500px;
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 0;
 }
 
-/* Grid Board */
+h1 { font-size: 2rem; margin: 0; letter-spacing: 2px; }
+
+.stats-bar { font-size: 0.9rem; color: #818384; }
+
+#new-game-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#new-game-btn:hover { background: var(--absent); }
+
+/* Board & Tiles */
 #board {
     display: grid;
     grid-template-rows: repeat(6, 1fr);
     gap: 5px;
-    margin-bottom: 20px;
+    padding: 10px;
+    margin-top: 20px;
 }
 
 .row {
@@ -56,8 +64,8 @@ header {
 }
 
 .tile {
-    width: 55px;
-    height: 55px;
+    width: 60px;
+    height: 60px;
     border: 2px solid var(--border-color);
     display: flex;
     justify-content: center;
@@ -65,51 +73,40 @@ header {
     font-size: 2rem;
     font-weight: bold;
     text-transform: uppercase;
+    transition: transform 0.1s ease;
 }
 
-/* Keyboard */
-#keyboard {
-    width: 100%;
+.tile[data-state="active"] {
+    border-color: var(--border-active);
+    animation: pop 0.1s ease-in-out;
 }
 
-.keyboard-row {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-bottom: 8px;
+/* Animations */
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
+@keyframes flip {
+    0% { transform: rotateX(0); }
+    50% { transform: rotateX(90deg); }
+    100% { transform: rotateX(0); }
+}
+
+@keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+}
+
+.shake { animation: shake 0.5s ease-in-out; }
+
+.flip { animation: flip 0.5s ease-in-out; }
+
+/* Keyboard Refinements */
 .key {
-    background-color: var(--key-bg);
-    border: none;
-    border-radius: 4px;
-    color: white;
-    padding: 15px 10px;
-    cursor: pointer;
-    font-weight: bold;
-    text-transform: uppercase;
-    flex: 1;
+    transition: background-color 0.3s ease, transform 0.1s;
 }
-
-.key.wide { flex: 1.5; }
-
-/* States */
-.correct { background-color: var(--correct) !important; border-color: var(--correct); }
-.present { background-color: var(--present) !important; border-color: var(--present); }
-.absent { background-color: var(--absent) !important; border-color: var(--absent); }
-
-/* Modal */
-.hidden { display: none !important; }
-#modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.8);
-    display: flex; justify-content: center; align-items: center;
-}
-.modal-content {
-    background: #1e1e1e;
-    padding: 30px;
-    border-radius: 8px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-}
+.key:active { transform: scale(0.95); }
